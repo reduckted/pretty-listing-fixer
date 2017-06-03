@@ -2,6 +2,7 @@
 Imports Microsoft.VisualStudio.ComponentModelHost
 Imports Microsoft.VisualStudio.Shell
 Imports Microsoft.VisualStudio.Shell.Interop
+Imports System
 Imports System.Runtime.InteropServices
 Imports System.Threading
 
@@ -10,7 +11,6 @@ Imports System.Threading
 <InstalledProductRegistration("#110", "#112", "1.0", IconResourceID:=1400)>
 <PackageRegistration(UseManagedResourcesOnly:=True)>
 <ProvideAutoLoad(UIContextGuids80.SolutionExists)>
-<ProvideOptionPage(GetType(Options), "Environment", "Pretty Listing Fixer", 0, 0, True)>
 Public NotInheritable Class FixerPackage
     Inherits Package
 
@@ -18,7 +18,7 @@ Public NotInheritable Class FixerPackage
     Public Const PackageGuidString As String = "ff021410-a239-46d0-a40b-fe4806b93ac8"
 
 
-    Private cgContext As FixerContext
+    Private Shared ReadOnly Frequency As TimeSpan = TimeSpan.FromSeconds(10)
 
 
     Protected Overrides Sub Initialize()
@@ -32,19 +32,14 @@ Public NotInheritable Class FixerPackage
         provider = New ServiceProvider(DirectCast(dte, Microsoft.VisualStudio.OLE.Interop.IServiceProvider))
         componentModel = DirectCast(provider.GetService(GetType(SComponentModel)), IComponentModel)
 
-        cgContext = componentModel.GetService(Of FixerContext)
-
         Tasks.Task.Delay(5000).ContinueWith(Sub() CheckPrettyListing())
     End Sub
 
 
     Private Sub CheckPrettyListing()
         Dim dte As DTE
-        Dim options As Options
 
 
-
-        options = DirectCast(GetDialogPage(GetType(Options)), Options)
         dte = DirectCast(GetService(GetType(DTE)), DTE)
 
         If dte IsNot Nothing Then
@@ -56,17 +51,11 @@ Public NotInheritable Class FixerPackage
             If (pretty IsNot Nothing) AndAlso (TypeOf pretty.Value Is Boolean) Then
                 If Not CBool(pretty.Value) Then
                     pretty.Value = True
-
-                    If options.Notify Then
-                        cgContext.Notify = True
-                    End If
                 End If
             End If
         End If
 
-        Tasks.Task _
-             .Delay(System.Math.Max((options?.Frequency).GetValueOrDefault() * 1000, 1000)) _
-             .ContinueWith(Sub(t) CheckPrettyListing())
+        Tasks.Task.Delay(Frequency).ContinueWith(Sub(x) CheckPrettyListing())
     End Sub
 
 End Class
