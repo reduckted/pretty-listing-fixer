@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.2
+
+* Visual Studio 2019 support.
+
 ## v1.1
 
 * Visual Studio 2017 support.
