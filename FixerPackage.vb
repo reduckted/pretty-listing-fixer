@@ -1,7 +1,6 @@
 ﻿Imports EnvDTE
-Imports Microsoft.VisualStudio.ComponentModelHost
+Imports Microsoft.VisualStudio
 Imports Microsoft.VisualStudio.Shell
-Imports Microsoft.VisualStudio.Shell.Interop
 Imports System
 Imports System.Runtime.InteropServices
 Imports System.Threading
@@ -9,10 +8,10 @@ Imports System.Threading
 
 <Guid(FixerPackage.PackageGuidString)>
 <InstalledProductRegistration("#110", "#112", "1.0", IconResourceID:=1400)>
-<PackageRegistration(UseManagedResourcesOnly:=True)>
-<ProvideAutoLoad(UIContextGuids80.SolutionExists)>
+<PackageRegistration(UseManagedResourcesOnly:=True, AllowsBackgroundLoading:=True)>
+<ProvideAutoLoad(VSConstants.UICONTEXT.SolutionOpening_string, PackageAutoLoadFlags.BackgroundLoad)>
 Public NotInheritable Class FixerPackage
-    Inherits Package
+    Inherits AsyncPackage
 
 
     Public Const PackageGuidString As String = "ff021410-a239-46d0-a40b-fe4806b93ac8"
@@ -21,41 +20,31 @@ Public NotInheritable Class FixerPackage
     Private Shared ReadOnly Frequency As TimeSpan = TimeSpan.FromSeconds(10)
 
 
-    Protected Overrides Sub Initialize()
-        Dim dte As DTE
-        Dim provider As ServiceProvider
-        Dim componentModel As IComponentModel
-
-
-        dte = DirectCast(GetService(GetType(DTE)), DTE)
-
-        provider = New ServiceProvider(DirectCast(dte, Microsoft.VisualStudio.OLE.Interop.IServiceProvider))
-        componentModel = DirectCast(provider.GetService(GetType(SComponentModel)), IComponentModel)
-
-        Tasks.Task.Delay(5000).ContinueWith(Sub() CheckPrettyListing())
-    End Sub
-
-
-    Private Sub CheckPrettyListing()
+    Protected Overrides Async Function InitializeAsync(cancellationToken As CancellationToken, progress As IProgress(Of ServiceProgressData)) As Tasks.Task
         Dim dte As DTE
 
 
+        Await JoinableTaskFactory.SwitchToMainThreadAsync()
+
         dte = DirectCast(GetService(GetType(DTE)), DTE)
 
-        If dte IsNot Nothing Then
-            Dim pretty As [Property]
+        CheckPrettyListing(dte)
+    End Function
 
 
-            pretty = dte.Properties("TextEditor", "Basic-Specific")?.Item("PrettyListing")
+    Private Sub CheckPrettyListing(dte As DTE)
+        Dim pretty As [Property]
 
-            If (pretty IsNot Nothing) AndAlso (TypeOf pretty.Value Is Boolean) Then
-                If Not CBool(pretty.Value) Then
-                    pretty.Value = True
-                End If
+
+        pretty = dte.Properties("TextEditor", "Basic-Specific")?.Item("PrettyListing")
+
+        If (pretty IsNot Nothing) AndAlso (TypeOf pretty.Value Is Boolean) Then
+            If Not CBool(pretty.Value) Then
+                pretty.Value = True
             End If
         End If
 
-        Tasks.Task.Delay(Frequency).ContinueWith(Sub(x) CheckPrettyListing())
+        Tasks.Task.Delay(Frequency).ContinueWith(Sub(x) CheckPrettyListing(dte))
     End Sub
 
 End Class
