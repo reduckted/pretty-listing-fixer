@@ -1,4 +1,5 @@
 ﻿Imports EnvDTE
+Imports EnvDTE80
 Imports Microsoft.VisualStudio
 Imports Microsoft.VisualStudio.Shell
 Imports System
@@ -21,18 +22,18 @@ Public NotInheritable Class FixerPackage
 
 
     Protected Overrides Async Function InitializeAsync(cancellationToken As CancellationToken, progress As IProgress(Of ServiceProgressData)) As Tasks.Task
-        Dim dte As DTE
+        Dim dte As DTE2
 
 
         Await JoinableTaskFactory.SwitchToMainThreadAsync()
 
-        dte = DirectCast(GetService(GetType(DTE)), DTE)
+        dte = DirectCast(GetService(GetType(DTE)), DTE2)
 
         CheckPrettyListing(dte)
     End Function
 
 
-    Private Sub CheckPrettyListing(dte As DTE)
+    Private Sub CheckPrettyListing(dte As DTE2)
         Dim pretty As [Property]
 
 
